@@ -4,6 +4,8 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { Header } from '@/components/custom/header';
 import { MessagesContext } from '@/context/messages-context';
 import { MessagesProvider } from '@/components/providers/messages-provider';
+import { UserDetailsProvider } from '@/components/providers/user-details-provider';
+import { AuthProvider } from '@/components/providers/auth-provider';
 
 const font = Inter({ subsets: ['latin'] });
 
@@ -16,17 +18,21 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={font.className}>
-        <MessagesProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-            disableTransitionOnChange
-          >
-            <Header />
-            {children}
-          </ThemeProvider>
-        </MessagesProvider>
+        <AuthProvider>
+          <UserDetailsProvider>
+            <MessagesProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="dark"
+                enableSystem={false}
+                disableTransitionOnChange
+              >
+                <Header />
+                {children}
+              </ThemeProvider>
+            </MessagesProvider>
+          </UserDetailsProvider>
+        </AuthProvider>
       </body>
     </html>
   );

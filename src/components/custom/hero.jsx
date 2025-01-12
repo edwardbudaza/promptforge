@@ -2,20 +2,25 @@
 
 import { ArrowRight, Link } from 'lucide-react';
 import { useContext, useState } from 'react';
+import { useMutation } from 'convex/react';
+import { useRouter } from 'next/navigation';
 
 import { MessagesContext } from '@/context/messages-context';
 import { UserDetailsContext } from '@/context/user-details-context';
 import { Lookup } from '@/data/lookup';
 import { Colors } from '@/data/colors';
 import { SignInDialog } from '../dialogs/sign-in-dialog';
+import { api } from '../../../convex/_generated/api';
 
 export const Hero = () => {
   const [userInput, setUserInput] = useState();
   const { messages, setMessages } = useContext(MessagesContext);
   const { userDetails, setUserdetails } = useContext(UserDetailsContext);
   const [openDialog, setOpenDialog] = useState(false);
+  const CreateWorkspace = useMutation(api.workspace.CreateWorkspace);
+  const router = useRouter();
 
-  const onGenerate = (input) => {
+  const onGenerate = async (input) => {
     if (!userDetails?.name) {
       setOpenDialog(true);
       return;
@@ -24,7 +29,18 @@ export const Hero = () => {
       role: 'user',
       content: input,
     });
-    console.log(messages);
+
+    const workspaceId = await CreateWorkspace({
+      user: userDetails._id,
+      messages: [
+        {
+          role: 'user',
+          content: input,
+        },
+      ],
+    });
+    console.log(workspaceId);
+    router.push(`/workspace/${workspaceId}`);
   };
   return (
     <div className="flex flex-col items-center mt-36 xl:mt-52 gap-2">

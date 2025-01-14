@@ -15,6 +15,7 @@ import { Colors } from '@/data/colors';
 import { Lookup } from '@/data/lookup';
 import { Prompt } from '@/data/prompt';
 import axios from 'axios';
+import { useSidebar } from '../ui/sidebar';
 
 export const ChatView = () => {
   const { workspaceId } = useParams();
@@ -24,6 +25,7 @@ export const ChatView = () => {
   const [userInput, setUserInput] = useState();
   const [loading, setLoading] = useState(false);
   const UpdateMessages = useMutation(api.workspace.UpdateMessages);
+  const { toggleSidebar } = useSidebar();
 
   useEffect(() => {
     workspaceId && GetWorkspaceData();
@@ -80,7 +82,7 @@ export const ChatView = () => {
   };
   return (
     <div className="relative h-[85vh] flex flex-col">
-      <div className="flex-1 overflow-y-scroll scrollbar-hide">
+      <div className="flex-1 overflow-y-scroll scrollbar-hide pl-5">
         {messages?.map((msg, index) => (
           <div
             key={index}
@@ -118,28 +120,41 @@ export const ChatView = () => {
       </div>
 
       {/* Input Section */}
-      <div
-        className="p-5 border rounded-xl max-w-xl w-full mt-3"
-        style={{
-          backgroundColor: Colors.BACKGROUND,
-        }}
-      >
-        <div className="flex gap-2">
-          <textarea
-            value={userInput}
-            onChange={(event) => setUserInput(event.target.value)}
-            placeholder={Lookup.INPUT_PLACEHOLDER}
-            className="outline-none bg-transparent w-full h-32 max-h-56 resize-none"
+
+      <div className="flex gap-2 items-end">
+        {userDetails && (
+          <Image
+            src={userDetails?.imageUrl}
+            alt="user"
+            width={30}
+            height={30}
+            className="rounded-full cursor-pointer"
+            onClick={toggleSidebar}
           />
-          {userInput && (
-            <ArrowRight
-              onClick={() => onGenerate(userInput)}
-              className="bg-blue-500 p-2 h-10 w-10 rounded-md cursor-pointer"
+        )}
+        <div
+          className="p-5 border rounded-xl max-w-xl w-full mt-3"
+          style={{
+            backgroundColor: Colors.BACKGROUND,
+          }}
+        >
+          <div className="flex gap-2">
+            <textarea
+              value={userInput}
+              onChange={(event) => setUserInput(event.target.value)}
+              placeholder={Lookup.INPUT_PLACEHOLDER}
+              className="outline-none bg-transparent w-full h-32 max-h-56 resize-none"
             />
-          )}
-        </div>
-        <div>
-          <Link className="w-5 h-5" />
+            {userInput && (
+              <ArrowRight
+                onClick={() => onGenerate(userInput)}
+                className="bg-blue-500 p-2 h-10 w-10 rounded-md cursor-pointer"
+              />
+            )}
+          </div>
+          <div>
+            <Link className="w-5 h-5" />
+          </div>
         </div>
       </div>
     </div>

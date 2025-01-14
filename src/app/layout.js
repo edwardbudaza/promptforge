@@ -1,12 +1,13 @@
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { ThemeProvider } from '@/components/providers/theme-provider';
 import { Header } from '@/components/custom/header';
-import { MessagesContext } from '@/context/messages-context';
-import { MessagesProvider } from '@/components/providers/messages-provider';
-import { UserDetailsProvider } from '@/components/providers/user-details-provider';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { ConvexClientProvider } from '@/components/providers/convex-client-provider';
+import { MessagesProvider } from '@/components/providers/messages-provider';
+import { ThemeProvider } from '@/components/providers/theme-provider';
+import { UserDetailsProvider } from '@/components/providers/user-details-provider';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { AppSidebar } from '@/components/custom/app-sidebar';
 
 const font = Inter({ subsets: ['latin'] });
 
@@ -29,8 +30,11 @@ export default function RootLayout({ children }) {
                   enableSystem={false}
                   disableTransitionOnChange
                 >
-                  <Header />
-                  {children}
+                  <SidebarProvider defaultOpen={false}>
+                    <AppSidebar />
+                    <Header />
+                    {children}
+                  </SidebarProvider>
                 </ThemeProvider>
               </MessagesProvider>
             </AuthProvider>

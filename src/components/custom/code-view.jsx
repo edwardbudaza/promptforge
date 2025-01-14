@@ -1,7 +1,5 @@
 'use client';
 
-import { Lookup } from '@/data/lookup';
-import { cn } from '@/lib/utils';
 import {
   SandpackProvider,
   SandpackLayout,
@@ -9,13 +7,70 @@ import {
   SandpackPreview,
   SandpackFileExplorer,
 } from '@codesandbox/sandpack-react';
-import { useState } from 'react';
+import axios from 'axios';
+import { useConvex, useMutation } from 'convex/react';
+import { useContext, useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+
+import { MessagesContext } from '@/context/messages-context';
+import { Lookup } from '@/data/lookup';
+import { Prompt } from '@/data/prompt';
+import { cn } from '@/lib/utils';
+import { api } from '../../../convex/_generated/api';
+import { Loader2Icon } from 'lucide-react';
 
 export const CodeView = () => {
+  const { workspaceId } = useParams();
   const [activeTab, setActiveTab] = useState('code');
   const [files, setFiles] = useState(Lookup?.DEFAULT_FILE);
+  const { messages, setMessages } = useContext(MessagesContext);
+  const UpdateFiles = useMutation(api.workspace.UpdateFiles);
+  const convex = useConvex();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    workspaceId && GetFiles();
+  }, [workspaceId]);
+
+  const GetFiles = async () => {
+    setLoading(true);
+    const result = await convex.query(api.workspace.GetWorkspace, {
+      workspaceId: workspaceId,
+    });
+    const mergedFiles = { ...Lookup.DEFAULT_FILE, ...result?.fileData };
+    setFiles(mergedFiles);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (messages?.length > 0) {
+      const role = messages[messages?.length - 1].role;
+      if (role === 'user') {
+        GenerateAiCode();
+      }
+    }
+  }, [messages]);
+
+  const GenerateAiCode = async () => {
+    setLoading(true);
+    const PROMPT = JSON.stringify(messages) + ' ' + Prompt.CODE_GEN_PROMPT;
+    const result = await axios.post('/api/gen-ai-code', {
+      prompt: PROMPT,
+    });
+
+    console.log(result.data);
+    const aiResp = result.data;
+
+    const mergedFiles = { ...Lookup.DEFAULT_FILE, ...aiResp?.files };
+    setFiles(mergedFiles);
+    await UpdateFiles({
+      workspaceId: workspaceId,
+      files: aiResp?.files,
+    });
+    setLoading(false);
+  };
   return (
-    <div>
+    <div className="relative">
       <div className="bg-[#181818] w-full p-2 border">
         <div className="flex items-center justify-center flex-wrap shrink-0 bg-black p-1 w-[140px] gap-3 rounded-full">
           <h2
@@ -67,6 +122,12 @@ export const CodeView = () => {
           )}
         </SandpackLayout>
       </SandpackProvider>
+      {loading && (
+        <div className="p-10 bg-gray-900 opacity-80 absolute top-0 rounded-lg w-full h-full flex items-center justify-center">
+          <Loader2Icon className="animate-spin h-10 w-10 text-white" />
+          <h2 className="text-white">Generating your files...</h2>
+        </div>
+      )}
     </div>
   );
 };

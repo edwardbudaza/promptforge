@@ -11,6 +11,7 @@ import { Lookup } from '@/data/lookup';
 import { Colors } from '@/data/colors';
 import { SignInDialog } from '../dialogs/sign-in-dialog';
 import { api } from '../../../convex/_generated/api';
+import { toast } from 'sonner';
 
 export const Hero = () => {
   const [userInput, setUserInput] = useState();
@@ -25,13 +26,17 @@ export const Hero = () => {
       setOpenDialog(true);
       return;
     }
+    if (userDetails?.token < 10) {
+      toast('You dont have enough token!');
+      return;
+    }
     setMessages({
       role: 'user',
       content: input,
     });
 
     const workspaceId = await CreateWorkspace({
-      user: userDetails._id,
+      user: userDetails?._id,
       messages: [
         {
           role: 'user',

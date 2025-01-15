@@ -1,12 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import { useConvex, useMutation } from 'convex/react';
 import { useParams } from 'next/navigation';
 import { useEffect, useContext, useState } from 'react';
 import { ArrowRight, Link, Loader2Icon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-
-import Image from 'next/image';
 
 import { api } from '../../../convex/_generated/api';
 import { MessagesContext } from '@/context/messages-context';
@@ -16,6 +15,8 @@ import { Lookup } from '@/data/lookup';
 import { Prompt } from '@/data/prompt';
 import axios from 'axios';
 import { useSidebar } from '../ui/sidebar';
+import { countToken } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export const ChatView = () => {
   const { workspaceId } = useParams();
@@ -26,6 +27,7 @@ export const ChatView = () => {
   const [loading, setLoading] = useState(false);
   const UpdateMessages = useMutation(api.workspace.UpdateMessages);
   const { toggleSidebar } = useSidebar();
+  const UpdateTokens = useMutation(api.users.UpdateToken);
 
   useEffect(() => {
     workspaceId && GetWorkspaceData();
@@ -63,14 +65,31 @@ export const ChatView = () => {
       content: result.data.result,
     };
     setMessages((prev) => [...prev, aiResp]);
+
     await UpdateMessages({
       messages: [...messages, aiResp],
       workspaceId: workspaceId,
+    });
+
+    const token =
+      Number(userDetails?.token) - Number(countToken(JSON.stringify(aiResp)));
+    setUserDetails((prev) => ({
+      ...prev,
+      token: token,
+    }));
+    // Update Tokens in Database
+    await UpdateTokens({
+      userId: userDetails?._id,
+      token: token,
     });
     setLoading(false);
   };
 
   const onGenerate = (input) => {
+    if (userDetails?.token < 10) {
+      toast('You dont have enough token!');
+      return;
+    }
     setMessages((prev) => [
       ...prev,
       {

@@ -18,19 +18,30 @@ import { Prompt } from '@/data/prompt';
 import { cn } from '@/lib/utils';
 import { api } from '../../../convex/_generated/api';
 import { Loader2Icon } from 'lucide-react';
+import { UserDetailsContext } from '@/context/user-details-context';
+import { countToken } from '@/lib/utils';
+import { SandpackPreviewClient } from './sandpack-preview-client';
+import { ActionContext } from '@/context/action-context';
 
 export const CodeView = () => {
   const { workspaceId } = useParams();
+  const { userDetails, setUserDetails } = useContext(UserDetailsContext);
   const [activeTab, setActiveTab] = useState('code');
   const [files, setFiles] = useState(Lookup?.DEFAULT_FILE);
   const { messages, setMessages } = useContext(MessagesContext);
   const UpdateFiles = useMutation(api.workspace.UpdateFiles);
   const convex = useConvex();
   const [loading, setLoading] = useState(false);
+  const UpdateTokens = useMutation(api.users.UpdateToken);
+  const { action, setAction } = useContext(ActionContext);
 
   useEffect(() => {
     workspaceId && GetFiles();
   }, [workspaceId]);
+
+  useEffect(() => {
+    setActiveTab('preview');
+  }, [action]);
 
   const GetFiles = async () => {
     setLoading(true);
@@ -67,8 +78,24 @@ export const CodeView = () => {
       workspaceId: workspaceId,
       files: aiResp?.files,
     });
+
+    const token =
+      Number(userDetails?.token) - Number(countToken(JSON.stringify(aiResp)));
+
+    // Update Tokens in Database
+    await UpdateTokens({
+      userId: userDetails?._id,
+      token: token,
+    });
+    setUserDetails((prev) => ({
+      ...prev,
+      token: token,
+    }));
+
+    setActiveTab('code');
     setLoading(false);
   };
+
   return (
     <div className="relative">
       <div className="bg-[#181818] w-full p-2 border">
@@ -114,10 +141,7 @@ export const CodeView = () => {
             </>
           ) : (
             <>
-              <SandpackPreview
-                style={{ height: '80vh' }}
-                showNavigator={true}
-              />
+              <SandpackPreviewClient />
             </>
           )}
         </SandpackLayout>

@@ -23,101 +23,123 @@ export const ChatView = () => {
   const convex = useConvex();
   const { messages, setMessages } = useContext(MessagesContext);
   const { userDetails, setUserDetails } = useContext(UserDetailsContext);
-  const [userInput, setUserInput] = useState();
+  const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
   const UpdateMessages = useMutation(api.workspace.UpdateMessages);
   const { toggleSidebar } = useSidebar();
   const UpdateTokens = useMutation(api.users.UpdateToken);
 
+  // Initialize messages as an empty array if undefined
+  const messagesList = Array.isArray(messages) ? messages : [];
+
   useEffect(() => {
-    workspaceId && GetWorkspaceData();
+    if (workspaceId) {
+      GetWorkspaceData();
+    }
   }, [workspaceId]);
 
-  /**
-   * Used to Get Workspace data using Workspace ID
-   */
   const GetWorkspaceData = async () => {
-    const result = await convex.query(api.workspace.GetWorkspace, {
-      workspaceId,
-    });
-    setMessages(result?.messages);
-    console.log('Workspace Data:', result);
+    try {
+      const result = await convex.query(api.workspace.GetWorkspace, {
+        workspaceId,
+      });
+      setMessages(result?.messages || []);
+      console.log('Workspace Data:', result);
+    } catch (error) {
+      console.error('Error fetching workspace:', error);
+      toast.error('Failed to load chat history');
+    }
   };
 
   useEffect(() => {
-    if (messages?.length > 0) {
-      const role = messages[messages?.length - 1].role;
-      if (role === 'user') {
+    if (messagesList.length > 0) {
+      const lastMessage = messagesList[messagesList.length - 1];
+      if (lastMessage?.role === 'user') {
         GetAiResponse();
       }
     }
-  }, [messages]);
+  }, [messagesList]);
 
   const GetAiResponse = async () => {
-    setLoading(true);
-    const PROMPT = JSON.stringify(messages) + Prompt.CHAT_PROMPT;
-    const result = await axios.post('/api/ai-chat', {
-      prompt: PROMPT,
-    });
-    console.log(result.data.result);
-    const aiResp = {
-      role: 'ai',
-      content: result.data.result,
-    };
-    setMessages((prev) => [...prev, aiResp]);
+    try {
+      setLoading(true);
+      const PROMPT = JSON.stringify(messagesList) + Prompt.CHAT_PROMPT;
+      const result = await axios.post('/api/ai-chat', {
+        prompt: PROMPT,
+      });
 
-    await UpdateMessages({
-      messages: [...messages, aiResp],
-      workspaceId: workspaceId,
-    });
+      const aiResp = {
+        role: 'ai',
+        content: result.data.result,
+      };
 
-    const token =
-      Number(userDetails?.token) - Number(countToken(JSON.stringify(aiResp)));
-    setUserDetails((prev) => ({
-      ...prev,
-      token: token,
-    }));
-    // Update Tokens in Database
-    await UpdateTokens({
-      userId: userDetails?._id,
-      token: token,
-    });
-    setLoading(false);
+      const updatedMessages = [...messagesList, aiResp];
+      setMessages(updatedMessages);
+
+      await UpdateMessages({
+        messages: updatedMessages,
+        workspaceId: workspaceId,
+      });
+
+      const tokenCount = countToken(JSON.stringify(aiResp));
+      const newTokenCount =
+        Number(userDetails?.token || 0) - Number(tokenCount);
+
+      setUserDetails((prev) => ({
+        ...prev,
+        token: newTokenCount,
+      }));
+
+      await UpdateTokens({
+        userId: userDetails?._id,
+        token: newTokenCount,
+      });
+    } catch (error) {
+      console.error('Error generating response:', error);
+      toast.error('Failed to generate response');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onGenerate = (input) => {
-    if (userDetails?.token < 10) {
-      toast('You dont have enough token!');
+    if (!input?.trim()) return;
+
+    if (!userDetails?.token || userDetails.token < 10) {
+      toast.error("You don't have enough tokens!");
       return;
     }
-    setMessages((prev) => [
-      ...prev,
+
+    const newMessages = [
+      ...messagesList,
       {
         role: 'user',
-        content: input,
+        content: input.trim(),
       },
-    ]);
+    ];
+
+    setMessages(newMessages);
     setUserInput('');
   };
+
   return (
     <div className="relative h-[85vh] flex flex-col">
       <div className="flex-1 overflow-y-scroll scrollbar-hide pl-5">
-        {messages?.map((msg, index) => (
+        {messagesList.map((msg, index) => (
           <div
             key={index}
-            className="p-3 rounded-lg mb-2 flex gap-2 items-start  leading-7"
+            className="p-3 rounded-lg mb-2 flex gap-2 items-start leading-7"
             style={{
               backgroundColor: Colors.BACKGROUND,
             }}
           >
-            {msg?.role === 'user' && (
+            {msg?.role === 'user' && userDetails?.imageUrl && (
               <Image
-                src={userDetails?.imageUrl}
+                src={userDetails.imageUrl}
                 alt="User Image"
                 width={35}
                 height={35}
-                className="
-                rounded-full"
+                className="rounded-full"
               />
             )}
             <ReactMarkdown className="flex flex-col">
@@ -138,12 +160,10 @@ export const ChatView = () => {
         )}
       </div>
 
-      {/* Input Section */}
-
       <div className="flex gap-2 items-end">
-        {userDetails && (
+        {userDetails?.imageUrl && (
           <Image
-            src={userDetails?.imageUrl}
+            src={userDetails.imageUrl}
             alt="user"
             width={30}
             height={30}
@@ -163,11 +183,12 @@ export const ChatView = () => {
               onChange={(event) => setUserInput(event.target.value)}
               placeholder={Lookup.INPUT_PLACEHOLDER}
               className="outline-none bg-transparent w-full h-32 max-h-56 resize-none"
+              disabled={loading}
             />
-            {userInput && (
+            {userInput?.trim() && !loading && (
               <ArrowRight
                 onClick={() => onGenerate(userInput)}
-                className="bg-blue-500 p-2 h-10 w-10 rounded-md cursor-pointer"
+                className="bg-blue-500 p-2 h-10 w-10 rounded-md cursor-pointer hover:bg-blue-600"
               />
             )}
           </div>

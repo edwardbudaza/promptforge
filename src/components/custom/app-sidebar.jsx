@@ -13,7 +13,7 @@ import { AppSidebarFooter } from './app-sidebar-footer';
 
 export function AppSidebar() {
   return (
-    <Sidebar>
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader className="p-5">
         <Image src="/logo.svg" alt="Prompt Forge" width={30} height={30} />
         <Button className="mt-5">

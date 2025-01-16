@@ -91,7 +91,12 @@ export const PricingCard = ({ pricing, popular = false }) => {
         <PayPalButtons
           onClick={() => setSelectedOption(pricing)}
           disabled={!userDetails}
-          style={{ layout: 'horizontal' }}
+          style={{
+            layout: 'horizontal', // Align buttons vertically
+            color: 'blue', // Button color (options: 'gold', 'blue', 'silver', 'white', 'black')
+            shape: 'pill', // Rounded buttons
+            label: 'pay', // Simplify button text
+          }}
           onApprove={() => onPaymentSuccess()}
           onCancel={() => console.log('Payment canceled')}
           createOrder={(data, actions) => {

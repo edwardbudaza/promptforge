@@ -38,7 +38,7 @@ export const SignInDialog = ({ openDialog, closeDialog }) => {
         uid: uuid4(),
       });
 
-      if (typeof windo !== undefined) {
+      if (typeof window !== undefined) {
         localStorage.setItem('user', JSON.stringify(user));
       }
       setUserDetails(userInfo?.data);
